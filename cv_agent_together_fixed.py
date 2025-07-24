@@ -1,77 +1,52 @@
-
-import streamlit as st
-from langsmith import traceable
-from fpdf import FPDF
 import os
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatTogether
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema.output_parser import StrOutputParser
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 
-# הגדר API Keys
-st.sidebar.title("🔧 הגדרות")
-together_key = st.sidebar.text_input("🔑 Together API Key", type="password")
-langsmith_key = st.sidebar.text_input("📊 LangSmith API Key (לא חובה)", type="password")
+# 🔑 API Keys
+os.environ["TOGETHER_API_KEY"] = "45fc0ac4cf54d42e0bcaf9d4cd2c57de87ad5a39afc4c29d32923e44706b9a4f"
+os.environ["LANGCHAIN_PROJECT"] = "cv-matcher"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGCHAIN_API_KEY"] = "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"  # Optional
 
-if together_key:
-    os.environ["OPENAI_API_KEY"] = together_key
-    os.environ["OPENAI_API_BASE"] = "https://api.together.xyz/v1"
-if langsmith_key:
-    os.environ["LANGCHAIN_API_KEY"] = langsmith_key
-    os.environ["LANGCHAIN_PROJECT"] = "cv-matcher-agent"
-    os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+# 💬 Prompt template
+template = """
+You are a CV adaptation assistant for job applications. Given a resume and job description, generate a fully rewritten resume tailored to the job, using the following formula:
 
-st.title("🤖 התאמת קורות חיים למשרה – Together AI (Fixed)")
-st.markdown("הזן טקסטים של מועמד ושל משרה, ותקבל התאמה מיידית (בחינם, ללא OpenAI)")
+1. Write a personalized "About Me" summary: include years of experience, industries, and 2–3 measurable achievements.
+2. Rewrite work experience using inverted pyramid structure, with focus on OUTCOME over output (impact on KPIs, profits, time etc).
+3. One-page clear & scannable format including:
+   - Personal info at top (name, phone, email, LinkedIn)
+   - One unique title
+   - Years only (no months)
+   - Company description if relevant
+4. Bottom: education, languages, volunteering, skills.
 
-resume_text = st.text_area("✍️ קורות חיים")
-job_text = st.text_area("📄 תיאור משרה")
+Avoid:
+- Generic or long-winded sentences
+- Output without outcome
+- Unfocused roles
+- Messy formatting
 
-@traceable(name="Compare CV and Job (Together API)")
-def match_resume_to_job(resume, job):
-    llm = ChatOpenAI(
-        temperature=0.2,
-        max_tokens=1024,
-        model="mistralai/Mixtral-8x7B-Instruct-v0.1",
-        openai_api_key=together_key,
-        openai_api_base="https://api.together.xyz/v1"
-    )
-    prompt = f"""
-השווה בין קורות החיים למשרה הבאה.
-החזר אחוז התאמה מ-0 עד 100 + נימוק קצר.
+Think like an HR reviewer, hiring manager, and ATS algorithm. Identify what’s missing, complete it, and output the final English CV draft as plain text.
 
-קורות חיים:
+---
+
+📄 Resume:
 {resume}
 
-משרה:
+📌 Job Description:
 {job}
-    """
-    return llm.invoke(prompt).content
 
-import unicodedata
+---
+Final CV:
+"""
 
-def sanitize_text(text):
-    return ''.join(c for c in text if unicodedata.category(c)[0] != 'So')  # מסיר אמוג'ים ותווים מיוחדים
+prompt = ChatPromptTemplate.from_template(template)
+model = ChatTogether(model="meta-llama/Llama-3-70b-chat-hf", temperature=0.4)
+chain = prompt | model | StrOutputParser()
 
-def create_pdf(resume):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    safe_text = sanitize_text(resume)
-    for line in safe_text.split('\n'):
-        pdf.cell(200, 10, txt=line, ln=1)
-    file_path = "final_resume.pdf"
-    pdf.output(file_path)
-    return file_path
+def match_resume_to_job(resume_text, job_text):
+    return chain.invoke({"resume": resume_text, "job": job_text})
 
-
-if st.button("✨ בצע התאמה"):
-    if not together_key:
-        st.error("אנא הזן Together API Key")
-    elif not resume_text or not job_text:
-        st.warning("אנא מלא גם קורות חיים וגם משרה")
-    else:
-        with st.spinner("בודק התאמה עם Together AI..."):
-            result = match_resume_to_job(resume_text, job_text)
-            st.success("התאמה הושלמה!")
-            st.markdown(f"**תוצאה:**\n\n{result}")
-            pdf_path = create_pdf(resume_text)
-            with open(pdf_path, "rb") as f:
-                st.download_button("📥 הורד PDF", f, file_name="resume.pdf")
