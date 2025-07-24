@@ -1,7 +1,4 @@
-# ניצור גרסה משולבת של הקובץ cv_agent_together_fixed.py עם גם התאמת קורות חיים וגם ממשק בדיקה בסיסי
-full_combined_code = '''\
 import os
-from pathlib import Path
 from langchain_together import ChatTogether
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
@@ -66,23 +63,18 @@ if __name__ == "__main__":
         if line.strip() == "":
             break
         lines.append(line)
-    resume_input = "\\n".join(lines)
+    resume_input = "\n".join(lines)
 
-    print("\\nPaste job description below. End input with an empty line:")
+    print("\nPaste job description below. End input with an empty line:")
     job_lines = []
     while True:
         line = input()
         if line.strip() == "":
             break
         job_lines.append(line)
-    job_input = "\\n".join(job_lines)
+    job_input = "\n".join(job_lines)
 
-    print("\\n⏳ Matching...")
+    print("\n⏳ Matching...")
     result = match_resume_to_job(resume_input, job_input)
-    print("\\n=== Suggested CV ===\\n")
+    print("\n=== Suggested CV ===\n")
     print(result)
-'''
-
-final_path.write_text(full_combined_code)
-final_path
-
