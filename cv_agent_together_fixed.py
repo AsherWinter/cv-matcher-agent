@@ -1,6 +1,7 @@
 # ניצור גרסה משולבת של הקובץ cv_agent_together_fixed.py עם גם התאמת קורות חיים וגם ממשק בדיקה בסיסי
 full_combined_code = '''\
 import os
+from pathlib import Path
 from langchain_together import ChatTogether
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
@@ -82,7 +83,6 @@ if __name__ == "__main__":
     print(result)
 '''
 
-final_path = Path("/mnt/data/cv_agent_together_fixed.py")
 final_path.write_text(full_combined_code)
 final_path
 
