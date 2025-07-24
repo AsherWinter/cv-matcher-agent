@@ -1,5 +1,5 @@
 import os
-from langchain.chat_models import ChatTogether
+from langchain_together import ChatTogether  # ✅ תיקון כאן
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough
